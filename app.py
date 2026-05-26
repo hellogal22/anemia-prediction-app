@@ -54,7 +54,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "⚙️ Preprocessing", 
     "🤖 Klasifikasi Model Awal", 
     "🚀 Hyperparameter Tuning",
-    "🔮 Prediksi Mandiri (Fitur Baru)"
+    "🔮 Prediksi Mandiri"
 ])
 
 # =========================================================
@@ -82,6 +82,7 @@ with tab1:
         sns.countplot(x='HGB_Anemia_Class', data=df_clean, ax=ax)
         plt.title('Distribusi Target Anemia')
         st.pyplot(fig)
+        plt.close()
         
     with col_graph2:
         st.subheader("Heatmap Korelasi")
@@ -90,6 +91,7 @@ with tab1:
         sns.heatmap(df_clean.select_dtypes(include=[np.number]).corr(), cmap='coolwarm', ax=ax)
         plt.title('Heatmap Korelasi')
         st.pyplot(fig)
+        plt.close()
 
 # =========================================================
 # TAB 2: PREPROCESSING
@@ -124,7 +126,6 @@ with tab3:
     st.header("Performa Model Awal (Sebelum Tuning)")
     st.write("Berikut adalah perbandingan performa dasar antara algoritma **Support Vector Machine (SVM)** dan **XGBoost Classifier**:")
     
-    # Dummy data performa berdasarkan hasil script Python asli Anda
     df_performa_awal = pd.DataFrame({
         'Model': ['SVM', 'XGBoost'],
         'Accuracy': [0.95, 0.98],
@@ -140,6 +141,7 @@ with tab3:
     plt.title('Perbandingan Performa Model Awal')
     plt.ylabel('Score')
     st.pyplot(fig)
+    plt.close()
 
 # =========================================================
 # TAB 4: HYPERPARAMETER TUNING
@@ -160,7 +162,7 @@ with tab4:
         st.metric(label="Akurasi Terbaik XGBoost Tuning", value="98.7%")
 
 # =========================================================
-# TAB 5: PREDIKSI MANDIRI (FITUR BARU INTERAKTIF)
+# TAB 5: PREDIKSI MANDIRI (DENGAN PERBAIKAN BUG 24 FITUR)
 # =========================================================
 with tab5:
     st.header("🔮 Form Prediksi Anemia Interaktif")
@@ -171,9 +173,9 @@ with tab5:
         col_in1, col_in2 = st.columns(2)
         
         with col_in1:
-            hgb = st.number_input("HGB (Hemoglobin) - g/dL", min_value=0.0, max_value=30.0, value=12.1, step=0.1)
-            rbc = st.number_input("RBC (Red Blood Cells) - 10^6/µL", min_value=0.0, max_value=15.0, value=4.3, step=0.1)
-            hct = st.number_input("HCT (Hematocrit) - %", min_value=0.0, max_value=100.0, value=37.6, step=0.1)
+            hgb = st.number_input("HGB (Hemoglobin) - g/dL", min_value=0.0, max_value=30.0, value=15.0, step=0.1)
+            rbc = st.number_input("RBC (Red Blood Cells) - 10^6/µL", min_value=0.0, max_value=15.0, value=5.0, step=0.1)
+            hct = st.number_input("HCT (Hematocrit) - %", min_value=0.0, max_value=100.0, value=45.0, step=0.1)
             mcv = st.number_input("MCV (Mean Corpuscular Volume) - fL", min_value=0.0, max_value=150.0, value=87.2, step=0.1)
             mch = st.number_input("MCH (Mean Corpuscular Hemoglobin) - pg", min_value=0.0, max_value=50.0, value=29.5, step=0.1)
             mchc = st.number_input("MCHC (MHC Concentration) - g/dL", min_value=0.0, max_value=50.0, value=33.8, step=0.1)
@@ -195,27 +197,53 @@ with tab5:
         submit_button = st.form_submit_button(label="Cek Hasil Prediksi", type="primary")
 
     if submit_button:
-        # 1. Mengumpulkan semua variabel input menjadi satu baris array.
-        # Catatan: Pastikan susunan kolom ini PERSIS sama dengan susunan kolom X pada file asli saat melatih model.
-        raw_inputs = [
-            gender, wbc, ne, ly, mo, eo, ba, rbc, hgb, hct, mcv, mch, mchc, rdw, plt_val, mpv, pct
-        ]
-        
-        # Mengubah ke format 2D Array untuk dimasukkan ke Scaler & Model
-        input_array = np.array([raw_inputs])
-        
         try:
-            # 2. Lakukan transformasi scaling menggunakan object scaler yang telah di-load
-            input_scaled = scaler.transform(input_array)
+            # 1. Ambil nama 24 kolom asli yang digunakan saat training X_train
+            fitur_digunakan = df_clean.drop(columns=[
+                'HGB_Anemia_Class',
+                'All_Class',
+                'Iron_anemia_Class',
+                'Folate_anemia_class',
+                'B12_Anemia_class'
+            ]).columns.tolist()
             
-            # 3. Jalankan prediksi menggunakan model XGBoost terbaik hasil Tuning
+            # 2. Buat baseline dictionary berisi nilai rata-rata (mean) untuk semua 24 kolom
+            X_df_clean = df_clean[fitur_digunakan]
+            input_dict = {col: X_df_clean[col].mean() for col in fitur_digunakan}
+            
+            # 3. Timpa nilai di dictionary dengan input nyata dari form yang diisi user
+            input_dict['GENDER'] = gender
+            input_dict['WBC'] = wbc
+            input_dict['NE#'] = ne
+            input_dict['LY#'] = ly
+            input_dict['MO#'] = mo
+            input_dict['EO#'] = eo
+            input_dict['BA#'] = ba
+            input_dict['RBC'] = rbc
+            input_dict['HGB'] = hgb
+            input_dict['HCT'] = hct
+            input_dict['MCV'] = mcv
+            input_dict['MCH'] = mch
+            input_dict['MCHC'] = mchc
+            input_dict['RDW'] = rdw
+            input_dict['PLT'] = plt_val
+            input_dict['MPV'] = mpv
+            input_dict['PCT'] = pct
+            
+            # 4. Konversi ke DataFrame dengan susunan kolom yang persis match (24 fitur)
+            input_df = pd.DataFrame([input_dict], columns=fitur_digunakan)
+            
+            # 5. Jalankan proses scaling menggunakan data 24 fitur yang sudah lengkap
+            input_scaled = scaler.transform(input_df)
+            
+            # 6. Jalankan prediksi menggunakan model XGBoost terbaik hasil tuning
             prediksi = best_xgb.predict(input_scaled)
             probabilitas = best_xgb.predict_proba(input_scaled)[0]
             
             st.markdown("---")
             st.subheader("📋 Kesimpulan Analisis Sistem:")
             
-            # 4. Tampilkan output visual berdasarkan hasil prediksi kelas
+            # 7. Tampilkan output visual berdasarkan hasil prediksi kelas
             if prediksi[0] == 1:
                 st.error("🚨 **Hasil Prediksi: TERDETEKSI ANEMIA (POSITIF)**")
                 st.write(f"Sistem mendeteksi indikasi anemia dengan tingkat keyakinan model sebesar **{probabilitas[1] * 100:.2f}%**.")
@@ -224,7 +252,7 @@ with tab5:
                 st.write(f"Sistem menyatakan kondisi darah normal dengan tingkat keyakinan model sebesar **{probabilitas[0] * 100:.2f}%**.")
                 
         except Exception as prediction_error:
-            st.error(f"Gagal memproses prediksi. Pastikan jumlah fitur input ({len(raw_inputs)}) sesuai dengan dimensi model. Detail Error: {prediction_error}")
+            st.error(f"Gagal memproses prediksi. Detail Error: {prediction_error}")
 
     # Catatan kaki / Disclaimer akademis
     st.markdown("<br><br>", unsafe_allow_html=True)
