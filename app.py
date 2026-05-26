@@ -229,3 +229,57 @@ with tab4:
             hasil_tuning.set_index('Model').plot(kind='bar', ax=ax)
             plt.ylabel('Score')
             st.pyplot(fig)
+
+# 1. Tambahkan tab baru di kode Anda
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Eksplorasi Data (EDA)", 
+    "⚙️ Preprocessing", 
+    "🤖 Klasifikasi Model Awal", 
+    "🚀 Hyperparameter Tuning",
+    "🔮 Prediksi Mandiri"  # <-- TAB BARU
+])
+
+with tab1:
+    # ... Kode EDA kamu yang sekarang sudah muncul di gambar ...
+    st.subheader("Visualisasi & Distribusi Data")
+
+with tab2:
+    # ... Kode Preprocessing kamu ...
+
+with tab3:
+    # ... Kode Klasifikasi Model Awal kamu ...
+
+with tab4:
+    # ... Kode Hyperparameter Tuning kamu ...
+
+# =========================================================
+# 2. ISI TAB BARU UNTUK INPUT USER
+# =========================================================
+with tab5:
+    st.subheader("Masukkan Nilai Laboratorium untuk Prediksi Anemia")
+    
+    # Buat input form
+    col1, col2 = st.columns(2)
+    with col1:
+        hgb = st.number_input("HGB (Hemoglobin)", value=12.0)
+        rbc = st.number_input("RBC (Red Blood Cells)", value=4.5)
+        hct = st.number_input("HCT (Hematocrit)", value=40.0)
+    with col2:
+        mv = st.number_input("MCV", value=85.0)
+        mch = st.number_input("MCH", value=30.0)
+        mchc = st.number_input("MCHC", value=33.0)
+        
+    if st.button("Jalankan Prediksi"):
+        # Lakukan scaling dan gunakan model terbaikmu (best_xgb atau best_svm)
+        # Pastikan kamu sudah meload 'scaler' dan 'best_xgb' di bagian atas app.py
+        
+        input_data = [[hgb, rbc, hct, mv, mch, mchc]]
+        input_scaled = scaler.transform(input_data)
+        
+        # Contoh memakai model xgb tuning kamu
+        prediksi = best_xgb.predict(input_scaled) 
+        
+        if prediksi[0] == 1:
+            st.error("🚨 Hasil: Terdeteksi Anemia")
+        else:
+            st.success("✅ Hasil: Kondisi Normal / Tidak Anemia")
