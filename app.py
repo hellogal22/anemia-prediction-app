@@ -87,7 +87,6 @@ with tab1:
     with col_graph2:
         st.subheader("Heatmap Korelasi")
         fig, ax = plt.subplots(figsize=(10, 7))
-        # Hanya menghitung korelasi kolom numerik
         sns.heatmap(df_clean.select_dtypes(include=[np.number]).corr(), cmap='coolwarm', ax=ax)
         plt.title('Heatmap Korelasi')
         st.pyplot(fig)
@@ -162,7 +161,7 @@ with tab4:
         st.metric(label="Akurasi Terbaik XGBoost Tuning", value="98.7%")
 
 # =========================================================
-# TAB 5: PREDIKSI MANDIRI (DENGAN PERBAIKAN BUG 24 FITUR)
+# TAB 5: PREDIKSI MANDIRI (PERBAIKAN SINKRONISASI DATA ASLI)
 # =========================================================
 with tab5:
     st.header("🔮 Form Prediksi Anemia Interaktif")
@@ -233,17 +232,15 @@ with tab5:
             # 4. Konversi ke DataFrame dengan susunan kolom yang persis match (24 fitur)
             input_df = pd.DataFrame([input_dict], columns=fitur_digunakan)
             
-            # 5. Jalankan proses scaling menggunakan data 24 fitur yang sudah lengkap
-            input_scaled = scaler.transform(input_df)
-            
-            # 6. Jalankan prediksi menggunakan model XGBoost terbaik hasil tuning
-            prediksi = best_xgb.predict(input_scaled)
-            probabilitas = best_xgb.predict_proba(input_scaled)[0]
+            # 5. JALANKAN PREDIKSI LANGSUNG MENGGUNAKAN DATA MENTAH (Tanpa Scaler)
+            # Karena model XGBoost Anda dilatih dengan data X_train mentah asli.
+            prediksi = best_xgb.predict(input_df)
+            probabilitas = best_xgb.predict_proba(input_df)[0]
             
             st.markdown("---")
             st.subheader("📋 Kesimpulan Analisis Sistem:")
             
-            # 7. Tampilkan output visual berdasarkan hasil prediksi kelas
+            # 6. Tampilkan output visual berdasarkan hasil prediksi kelas
             if prediksi[0] == 1:
                 st.error("🚨 **Hasil Prediksi: TERDETEKSI ANEMIA (POSITIF)**")
                 st.write(f"Sistem mendeteksi indikasi anemia dengan tingkat keyakinan model sebesar **{probabilitas[1] * 100:.2f}%**.")
